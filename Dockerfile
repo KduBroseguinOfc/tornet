@@ -1,4 +1,4 @@
-FROM python:3.14.5-slim
+FROM python:3.15-rc-alpine3.22
 
 # Set Docker environment variable
 ENV DOCKER_ENV=true
