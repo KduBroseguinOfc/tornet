@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TorNet — Programmatic Tor IP Rotation</title>
+  <meta name="description" content="TorNet is a Python library for automated IP rotation via the Tor network. Built for OSINT, anonymous API testing, and network privacy." />
+  <meta property="og:title" content="TorNet — Programmatic Tor IP Rotation" />
+  <meta property="og:description" content="Python library for automated Tor identity cycling. 263 stars on GitHub." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --bg1: #0f0f0f;
+      --bg2: #141414;
+      --bg3: #1a1a1a;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #e8e8e8;
+      --text2: #888;
+      --text3: #555;
+      --green: #00ff88;
+      --green2: #00cc6a;
+      --green3: rgba(0,255,136,0.08);
+      --green4: rgba(0,255,136,0.15);
+      --red: #ff4444;
+      --amber: #ffaa00;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(8,8,8,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .nav-logo span { color: var(--text3); }
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text2);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .nav-links a i { font-size: 1rem; }
+    .nav-links a:hover { color: var(--green); }
+    .nav-links a.active { color: var(--green); }
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      background: var(--green3);
+      color: var(--green) !important;
+      border: 1px solid rgba(0,255,136,0.25);
+      padding: 0.4rem 1rem;
+      border-radius: 4px;
+      transition: all 0.2s !important;
+    }
+    .nav-cta:hover { background: var(--green4) !important; border-color: var(--green) !important; }
+
+    /* ─── SECTIONS ─── */
+    section { display: none; }
+    section.active { display: block; }
+
+    /* ─── HERO ─── */
+    #hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 6rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .grid-bg {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
+    }
+    .hero-badge {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: var(--green3);
+      border: 1px solid rgba(0,255,136,0.2);
+      padding: 0.3rem 0.9rem;
+      border-radius: 100px;
+      margin-bottom: 2rem;
+    }
+    .hero-badge::before { content: "◉ "; }
+    h1.hero-title {
+      font-family: var(--mono);
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    h1.hero-title .green { color: var(--green); }
+    h1.hero-title .dim { color: var(--text3); }
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: clamp(0.9rem, 2vw, 1.1rem);
+      color: var(--text2);
+      text-align: center;
+      margin-bottom: 3rem;
+      max-width: 560px;
+    }
+    .hero-install {
+      background: var(--bg1);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 3rem;
+      min-width: 340px;
+    }
+    .hero-install .prompt { color: var(--green); font-family: var(--mono); font-size: 0.9rem; }
+    .hero-install code { font-family: var(--mono); font-size: 0.9rem; color: var(--text); flex: 1; }
+    .copy-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-family: var(--mono); font-size: 0.85rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .copy-btn:hover { color: var(--green); border-color: rgba(0,255,136,0.3); }
+    .hero-stats {
+      display: flex; gap: 3rem;
+      margin-bottom: 3rem;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-family: var(--mono); font-size: 1.6rem; font-weight: 700; color: var(--green); }
+    .stat-label { font-family: var(--mono); font-size: 0.7rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; }
+    .hero-btns { display: flex; gap: 1rem; }
+    .btn-primary {
+      font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+      background: var(--green); color: #000; font-weight: 700;
+      padding: 0.7rem 1.6rem; border-radius: 5px; text-decoration: none;
+      transition: opacity 0.2s;
+      cursor: pointer; border: none;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-ghost {
+      font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border2);
+      padding: 0.7rem 1.6rem; border-radius: 5px; text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border); }
+
+    /* ─── TERMINAL DEMO ─── */
+    .terminal-section {
+      padding: 5rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: var(--mono); font-size: 0.7rem;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--green); margin-bottom: 0.5rem;
+    }
+    .section-label::before { content: "// "; color: var(--text3); }
+    h2.section-title {
+      font-family: var(--sans); font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 500; color: var(--text); margin-bottom: 1rem;
+    }
+    .section-desc { color: var(--text2); max-width: 560px; margin-bottom: 3rem; font-size: 0.95rem; }
+    .terminal {
+      background: var(--bg1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .terminal-bar {
+      background: var(--bg2);
+      padding: 0.7rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .terminal-title { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); margin-left: 0.5rem; }
+    .terminal-body { padding: 1.5rem; }
+    .terminal-body pre {
+      font-family: var(--mono); font-size: 0.82rem;
+      line-height: 1.8; overflow-x: auto;
+    }
+    .t-prompt { color: var(--green); }
+    .t-cmd { color: var(--text); }
+    .t-comment { color: var(--text3); }
+    .t-out { color: var(--text2); }
+    .t-ip { color: var(--amber); }
+    .t-ok { color: var(--green); }
+    .t-err { color: var(--red); }
+
+    /* ─── FEATURES ─── */
+    .features-section {
+      padding: 5rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .feature-card {
+      background: var(--bg);
+      padding: 2rem;
+    }
+    .feature-icon {
+      font-size: 1.6rem;
+      color: var(--green); margin-bottom: 1rem;
+      line-height: 1;
+    }
+    .feature-title { font-weight: 500; margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .feature-desc { color: var(--text2); font-size: 0.85rem; line-height: 1.6; }
+
+    /* ─── DOCS ─── */
+    #docs {
+      max-width: 860px; margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+    }
+    .docs-nav {
+      display: flex; gap: 0; margin-bottom: 3rem;
+      border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden;
+    }
+    .docs-nav button {
+      flex: 1; padding: 0.7rem;
+      background: none; border: none;
+      font-family: var(--mono); font-size: 0.75rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text3); cursor: pointer;
+      transition: all 0.2s;
+      border-right: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    }
+    .docs-nav button i { font-size: 1rem; }
+    .docs-nav button:last-child { border-right: none; }
+    .docs-nav button:hover { color: var(--text); background: var(--bg1); }
+    .docs-nav button.active { background: var(--green3); color: var(--green); }
+    .docs-content { display: none; }
+    .docs-content.active { display: block; }
+    h2.docs-h2 {
+      font-family: var(--mono); font-size: 1.1rem; font-weight: 500;
+      color: var(--green); margin: 2.5rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h2.docs-h2:first-child { margin-top: 0; }
+    h3.docs-h3 {
+      font-family: var(--mono); font-size: 0.9rem;
+      color: var(--text2); margin: 1.5rem 0 0.7rem;
+      letter-spacing: 0.05em;
+    }
+    p.docs-p { color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.7; }
+    .code-block {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; margin: 1rem 0;
+    }
+    .code-block-header {
+      background: var(--bg2); padding: 0.5rem 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang { font-family: var(--mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+    .code-copy {
+      font-size: 1rem; color: var(--text3);
+      background: none; border: none; cursor: pointer;
+      transition: color 0.2s;
+      display: flex; align-items: center; gap: 0.25rem;
+    }
+    .code-copy:hover { color: var(--green); }
+    .code-block pre {
+      padding: 1.2rem 1.5rem;
+      font-family: var(--mono); font-size: 0.82rem;
+      line-height: 1.7; overflow-x: auto;
+    }
+    .kw { color: #c792ea; }
+    .fn { color: #82aaff; }
+    .str { color: #c3e88d; }
+    .cm { color: var(--text3); }
+    .num { color: #f78c6c; }
+    .param-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+    .param-table th {
+      text-align: left; padding: 0.5rem 1rem;
+      font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text3);
+      border-bottom: 1px solid var(--border);
+    }
+    .param-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); color: var(--text2); }
+    .param-table td:first-child { font-family: var(--mono); font-size: 0.82rem; color: var(--green); }
+    .param-table td:nth-child(2) { font-family: var(--mono); font-size: 0.78rem; color: var(--amber); }
+    .tag {
+      display: inline-block; font-family: var(--mono); font-size: 0.68rem;
+      padding: 0.15rem 0.5rem; border-radius: 3px;
+      background: rgba(0,255,136,0.1); color: var(--green);
+      border: 1px solid rgba(0,255,136,0.2);
+      margin-left: 0.5rem;
+    }
+    .tag.opt { background: rgba(255,170,0,0.1); color: var(--amber); border-color: rgba(255,170,0,0.2); }
+    .alert {
+      border-left: 3px solid var(--amber);
+      background: rgba(255,170,0,0.05);
+      padding: 0.8rem 1rem; border-radius: 0 6px 6px 0;
+      font-size: 0.85rem; color: var(--text2); margin: 1rem 0;
+    }
+    .alert strong { color: var(--amber); font-family: var(--mono); font-size: 0.8rem; }
+    .alert-info { border-color: var(--green); background: rgba(0,255,136,0.04); }
+    .alert-info strong { color: var(--green); }
+
+    /* ─── BLOG ─── */
+    #blog {
+      max-width: 860px; margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+    }
+    .blog-grid { display: grid; gap: 1.5rem; margin-top: 2rem; }
+    .blog-card {
+      background: var(--bg1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2rem;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .blog-card:hover { border-color: rgba(0,255,136,0.25); transform: translateY(-2px); }
+    .blog-meta {
+      display: flex; gap: 1rem; align-items: center;
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--text3); margin-bottom: 1rem;
+    }
+    .blog-tag-pill {
+      background: var(--green3); color: var(--green);
+      border: 1px solid rgba(0,255,136,0.2);
+      padding: 0.15rem 0.6rem; border-radius: 100px;
+    }
+    h3.blog-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem; }
+    .blog-excerpt { color: var(--text2); font-size: 0.88rem; line-height: 1.6; }
+    .blog-read { font-family: var(--mono); font-size: 0.72rem; color: var(--green); margin-top: 1rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .blog-post { display: none; }
+    .blog-post.active { display: block; }
+    .blog-back {
+      font-family: var(--mono); font-size: 0.78rem; color: var(--text3);
+      background: none; border: none; cursor: pointer;
+      padding: 0; margin-bottom: 2rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      transition: color 0.2s;
+    }
+    .blog-back:hover { color: var(--green); }
+    .post-header { margin-bottom: 3rem; }
+    .post-title { font-family: var(--sans); font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 600; margin-bottom: 1rem; }
+    .post-body { color: var(--text2); line-height: 1.8; font-size: 0.95rem; }
+    .post-body p { margin-bottom: 1.2rem; }
+    .post-body h3 { font-family: var(--mono); color: var(--green); margin: 2rem 0 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .footer-logo { font-family: var(--mono); font-size: 1.2rem; color: var(--green); margin-bottom: 1rem; }
+    .footer-links { display: flex; gap: 2rem; justify-content: center; margin-bottom: 2rem; }
+    .footer-links a { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .footer-links a:hover { color: var(--green); }
+    .footer-copy { font-family: var(--mono); font-size: 0.7rem; color: var(--text3); }
+    .footer-copy a { color: var(--text3); text-decoration: none; }
+    .footer-copy a:hover { color: var(--green); }
+
+    /* ─── CURSOR ─── */
+    .cursor-blink { animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ─── MISC ─── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+    .fade-in { animation: fadeUp 0.5s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 600px) {
+      nav { padding: 0.8rem 1rem; }
+      .nav-links { gap: 1rem; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      h1.hero-title { font-size: 2.8rem; }
+      .hero-install { min-width: 0; width: 100%; }
+      .hero-stats { gap: 1.5rem; }
+      .hero-btns { flex-direction: column; width: 100%; }
+      .btn-primary, .btn-ghost { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#" onclick="showSection('home')"><span>~/</span>tornet</a>
+  <div class="nav-links">
+    <a href="#" onclick="showSection('home')" id="nav-home" class="active"><i class='bx bx-home-alt'></i> Home</a>
+    <a href="#" onclick="showSection('docs')" id="nav-docs"><i class='bx bx-book-open'></i> Docs</a>
+    <a href="#" onclick="showSection('blog')" id="nav-blog"><i class='bx bx-edit-alt'></i> Blog</a>
+    <a href="https://github.com/ayadseghairi/tornet" target="_blank" class="nav-cta"><i class='bx bxl-github'></i> GitHub</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════ HOME ═══════════════════════════════ -->
+<section id="home" class="active">
+
+  <div id="hero">
+    <div class="grid-bg"></div>
+    <div class="hero-badge">Open Source · PyPI · MIT License</div>
+
+    <h1 class="hero-title">
+      <span class="green">Tor</span>Net<span class="dim">.</span>
+    </h1>
+    <p class="hero-sub">Programmatic IP rotation via the Tor network.<br>Built for OSINT automation and anonymous API testing.</p>
+
+    <div class="hero-install">
+      <span class="prompt">$</span>
+      <code>pip install python-tornet</code>
+      <button class="copy-btn" onclick="copyToClipboard('pip install python-tornet', this)"><i class='bx bx-copy'></i></button>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num"><i class='bx bxs-star' style="font-size:1rem;vertical-align:2px;margin-right:2px"></i>263</div>
+        <div class="stat-label">GitHub Stars</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><i class='bx bx-git-repo-forked' style="font-size:1rem;vertical-align:2px;margin-right:2px"></i>43</div>
+        <div class="stat-label">Forks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><i class='bx bx-package' style="font-size:1rem;vertical-align:2px;margin-right:2px"></i>6</div>
+        <div class="stat-label">Releases</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">v2.2</div>
+        <div class="stat-label">Latest</div>
+      </div>
+    </div>
+
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="showSection('docs')">Read the Docs</button>
+      <a class="btn-ghost" href="https://github.com/ayadseghairi/tornet" target="_blank"><i class='bx bxl-github' style="font-size:1rem;vertical-align:-2px;margin-right:0.3rem"></i>View on GitHub</a>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- TERMINAL DEMO -->
+  <div class="terminal-section">
+    <div class="section-label">Quick Start</div>
+    <h2 class="section-title">Zero to rotating in 30 seconds</h2>
+    <p class="section-desc">TorNet wraps Tor's control protocol into a clean Python API. No config files. No manual setup.</p>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="terminal-title">tornet — zsh</span>
+      </div>
+      <div class="terminal-body">
+<pre><span class="t-comment"># CLI usage — change IP every 60 seconds, 10 times</span>
+<span class="t-prompt">$</span> <span class="t-cmd">tornet --interval 60 --count 10</span>
+
+<span class="t-out">[*] Initializing Tor environment...</span>
+<span class="t-ok">[+] Tor is running on port 9050</span>
+<span class="t-ok">[+] Current IP: </span><span class="t-ip">185.220.101.47</span>
+<span class="t-out">[~] Rotating identity...</span>
+<span class="t-ok">[+] New IP:     </span><span class="t-ip">104.244.73.80</span>
+<span class="t-out">[~] Rotating identity...</span>
+<span class="t-ok">[+] New IP:     </span><span class="t-ip">199.87.154.255</span>
+<span class="t-out">...</span>
+
+<span class="t-comment"># Or use it as a Python library</span>
+<span class="t-prompt">$</span> <span class="t-cmd">python3</span>
+<span class="t-prompt">>>></span> <span class="t-cmd">from tornet import initialize_environment, ma_ip, change_ip</span>
+<span class="t-prompt">>>></span> <span class="t-cmd">initialize_environment()</span>
+<span class="t-ok">True</span>
+<span class="t-prompt">>>></span> <span class="t-cmd">ma_ip()</span>
+<span class="t-ip">'185.220.101.47'</span>
+<span class="t-prompt">>>></span> <span class="t-cmd">change_ip()</span>
+<span class="t-ip">'104.244.73.80'</span>
+<span class="t-prompt">>>></span> <span class="cursor-blink">█</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- FEATURES -->
+  <div class="features-section">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">What TorNet does</h2>
+    <p class="section-desc">A minimal, focused library — no bloat, no unnecessary dependencies.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bx-transfer-alt'></i></div>
+        <div class="feature-title">Automated IP Rotation</div>
+        <div class="feature-desc">Cycle through Tor exit nodes at a configurable interval. Set count to 0 for indefinite rotation.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bxl-python'></i></div>
+        <div class="feature-title">Python API</div>
+        <div class="feature-desc">Import and use directly in your scripts. <code style="font-family:var(--mono);font-size:0.8rem;color:var(--green)">change_ip()</code>, <code style="font-family:var(--mono);font-size:0.8rem;color:var(--green)">ma_ip()</code>, and more.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bx-terminal'></i></div>
+        <div class="feature-title">CLI Interface</div>
+        <div class="feature-desc">Run from any terminal with <code style="font-family:var(--mono);font-size:0.8rem;color:var(--green)">tornet</code> commands. No Python script required.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bxl-docker'></i></div>
+        <div class="feature-title">Docker Support</div>
+        <div class="feature-desc">Official Dockerfile and docker-compose for isolated, reproducible deployments.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bx-wrench'></i></div>
+        <div class="feature-title">Auto-Fix</div>
+        <div class="feature-desc">Missing dependencies? Run <code style="font-family:var(--mono);font-size:0.8rem;color:var(--green)">tornet --auto-fix</code> to resolve common setup issues automatically.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class='bx bx-globe'></i></div>
+        <div class="feature-title">Browser Proxy</div>
+        <div class="feature-desc">Configure Firefox to route traffic through TorNet's SOCKS5 proxy on <code style="font-family:var(--mono);font-size:0.8rem;color:var(--green)">127.0.0.1:9050</code>.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-logo">~/tornet</div>
+    <div class="footer-links">
+      <a href="https://github.com/ayadseghairi/tornet" target="_blank"><i class='bx bxl-github'></i> GitHub</a>
+      <a href="https://pypi.org/project/python-tornet" target="_blank"><i class='bx bx-cube'></i> PyPI</a>
+      <a href="#" onclick="showSection('docs')"><i class='bx bx-book-open'></i> Docs</a>
+      <a href="#" onclick="showSection('blog')"><i class='bx bx-edit-alt'></i> Blog</a>
+      <a href="https://ayadseghiri.dev" target="_blank"><i class='bx bx-user'></i> Author</a>
+    </div>
+    <div class="footer-copy">
+      MIT License · Built by <a href="https://ayadseghiri.dev" target="_blank">Ayad Seghairi</a>
+    </div>
+  </footer>
+
+</section>
+
+
+<!-- ═══════════════════════════════ DOCS ═══════════════════════════════ -->
+<section id="docs">
+<div id="docs-inner">
+  <div class="docs-nav">
+    <button class="active" onclick="switchDoc('installation', this)"><i class='bx bx-download'></i> Installation</button>
+    <button onclick="switchDoc('cli', this)"><i class='bx bx-terminal'></i> CLI Reference</button>
+    <button onclick="switchDoc('api', this)"><i class='bx bxl-python'></i> Python API</button>
+    <button onclick="switchDoc('docker', this)"><i class='bx bxl-docker'></i> Docker</button>
+    <button onclick="switchDoc('browser', this)"><i class='bx bx-globe'></i> Browser</button>
+  </div>
+
+  <!-- INSTALLATION -->
+  <div class="docs-content active" id="doc-installation">
+    <h2 class="docs-h2">Installation</h2>
+    <p class="docs-p">TorNet requires Python 3.7+ and Tor installed on your system.</p>
+
+    <h3 class="docs-h3">Install via pip</h3>
+    <div class="code-block">
+      <div class="code-block-header">
+        <span class="code-lang">bash</span>
+        <button class="code-copy" onclick="copyToClipboard('pip install python-tornet', this)"><i class='bx bx-copy'></i></button>
+      </div>
+      <pre>pip install python-tornet</pre>
+    </div>
+
+    <h3 class="docs-h3">Install via AUR (Arch Linux)</h3>
+    <div class="code-block">
+      <div class="code-block-header">
+        <span class="code-lang">bash</span>
+        <button class="code-copy" onclick="copyToClipboard('yay -S python-tornet', this)"><i class='bx bx-copy'></i></button>
+      </div>
+      <pre>yay -S python-tornet</pre>
+    </div>
+
+    <h3 class="docs-h3">Install Tor</h3>
+    <p class="docs-p">TorNet requires the Tor daemon to be available on your system:</p>
+    <div class="code-block">
+      <div class="code-block-header">
+        <span class="code-lang">bash</span>
+        <button class="code-copy" onclick="copyToClipboard('# Debian/Ubuntu\nsudo apt install tor\n\n# Fedora/RHEL\nsudo dnf install tor\n\n# Arch Linux\nsudo pacman -S tor\n\n# macOS\nbrew install tor', this)"><i class='bx bx-copy'></i></button>
+      </div>
+<pre><span class="t-comment"># Debian/Ubuntu</span>
+sudo apt install tor
+
+<span class="t-comment"># Fedora/RHEL</span>
+sudo dnf install tor
+
+<span class="t-comment"># Arch Linux</span>
+sudo pacman -S tor
+
+<span class="t-comment"># macOS</span>
+brew install tor</pre>
+    </div>
+
+    <h3 class="docs-h3">Verify installation</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">bash</span></div>
+<pre><span class="t-prompt">$</span> tornet --ip
+<span class="t-ip">185.220.101.47</span></pre>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>NOTE</strong> — If you encounter dependency issues, run <code style="font-family:var(--mono)">tornet --auto-fix</code> to resolve them automatically.
+    </div>
+  </div>
+
+  <!-- CLI REFERENCE -->
+  <div class="docs-content" id="doc-cli">
+    <h2 class="docs-h2">CLI Reference</h2>
+    <p class="docs-p">TorNet exposes a full command-line interface after installation.</p>
+
+    <h3 class="docs-h3">Commands</h3>
+    <table class="param-table">
+      <thead>
+        <tr>
+          <th>Flag</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>--ip</td><td>flag</td><td>Display your current Tor exit node IP address</td></tr>
+        <tr><td>--interval &lt;sec&gt;</td><td>integer</td><td>Seconds between each IP rotation</td></tr>
+        <tr><td>--count &lt;n&gt;</td><td>integer</td><td>Number of rotations. 0 = run indefinitely</td></tr>
+        <tr><td>--stop</td><td>flag</td><td>Stop all running TorNet processes</td></tr>
+        <tr><td>--auto-fix</td><td>flag</td><td>Automatically install missing dependencies</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="docs-h3">Examples</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">bash</span></div>
+<pre><span class="t-comment"># Show current IP</span>
+<span class="t-prompt">$</span> tornet --ip
+
+<span class="t-comment"># Rotate every 60s, exactly 10 times</span>
+<span class="t-prompt">$</span> tornet --interval 60 --count 10
+
+<span class="t-comment"># Rotate every 30s indefinitely</span>
+<span class="t-prompt">$</span> tornet --interval 30 --count 0
+
+<span class="t-comment"># Stop all TorNet processes</span>
+<span class="t-prompt">$</span> tornet --stop
+
+<span class="t-comment"># Fix broken dependencies</span>
+<span class="t-prompt">$</span> tornet --auto-fix</pre>
+    </div>
+
+    <h3 class="docs-h3">Verify your Tor circuit</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">bash</span></div>
+<pre>curl --socks5 127.0.0.1:9050 https://check.torproject.org/api/ip</pre>
+    </div>
+  </div>
+
+  <!-- PYTHON API -->
+  <div class="docs-content" id="doc-api">
+    <h2 class="docs-h2">Python API</h2>
+    <p class="docs-p">Import TorNet directly into your Python scripts for programmatic control.</p>
+
+    <h3 class="docs-h3">Import</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre><span class="kw">from</span> tornet <span class="kw">import</span> ma_ip, change_ip, initialize_environment, change_ip_repeatedly</pre>
+    </div>
+
+    <h2 class="docs-h2">Functions</h2>
+
+    <h3 class="docs-h3">initialize_environment() <span class="tag">required</span></h3>
+    <p class="docs-p">Starts the Tor daemon and sets up the SOCKS proxy. Must be called before any other function.</p>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre>initialize_environment()  <span class="cm"># Returns True on success</span></pre>
+    </div>
+
+    <h3 class="docs-h3">ma_ip() → str</h3>
+    <p class="docs-p">Returns your current IP address as seen from the Tor exit node.</p>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre>ip = ma_ip()
+<span class="fn">print</span>(ip)  <span class="cm"># '185.220.101.47'</span></pre>
+    </div>
+
+    <h3 class="docs-h3">change_ip() → str</h3>
+    <p class="docs-p">Requests a new Tor identity and returns the new exit node IP.</p>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre>new_ip = change_ip()
+<span class="fn">print</span>(new_ip)  <span class="cm"># '104.244.73.80'</span></pre>
+    </div>
+
+    <h3 class="docs-h3">change_ip_repeatedly(interval, count)</h3>
+    <p class="docs-p">Rotates IP on a schedule. Pass count=0 to run indefinitely.</p>
+    <table class="param-table">
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>interval</td><td>int</td><td>Seconds between rotations</td></tr>
+        <tr><td>count</td><td>int</td><td>Number of rotations. 0 = indefinite</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre>change_ip_repeatedly(<span class="num">60</span>, <span class="num">10</span>)   <span class="cm"># Every 60s, 10 times</span>
+change_ip_repeatedly(<span class="num">30</span>, <span class="num">0</span>)    <span class="cm"># Every 30s, forever</span></pre>
+    </div>
+
+    <h3 class="docs-h3">Full example</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre><span class="kw">from</span> tornet <span class="kw">import</span> ma_ip, change_ip, initialize_environment
+
+<span class="cm"># Initialize Tor</span>
+initialize_environment()
+
+<span class="cm"># Print current IP</span>
+<span class="fn">print</span>(<span class="str">f"Current IP: {ma_ip()}"</span>)
+
+<span class="cm"># Rotate and print new IP</span>
+<span class="fn">print</span>(<span class="str">f"New IP:     {change_ip()}"</span>)</pre>
+    </div>
+  </div>
+
+  <!-- DOCKER -->
+  <div class="docs-content" id="doc-docker">
+    <h2 class="docs-h2">Docker</h2>
+    <p class="docs-p">TorNet ships with an official Dockerfile and docker-compose configuration for isolated deployments.</p>
+
+    <h3 class="docs-h3">Using docker-compose</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">bash</span></div>
+<pre><span class="t-comment"># Clone the repo</span>
+git clone https://github.com/ayadseghairi/tornet.git
+cd tornet
+
+<span class="t-comment"># Build and run with docker-compose</span>
+docker compose up --build</pre>
+    </div>
+
+    <h3 class="docs-h3">Using Docker directly</h3>
+    <div class="code-block">
+      <div class="code-block-header"><span class="code-lang">bash</span></div>
+<pre><span class="t-comment"># Build the image</span>
+docker build -t tornet .
+
+<span class="t-comment"># Run with interval and count</span>
+docker run --rm tornet --interval 60 --count 5</pre>
+    </div>
+
+    <div class="alert">
+      <strong>NOTE</strong> — Docker deployments expose the SOCKS5 proxy on port 9050. Map it with <code style="font-family:var(--mono)">-p 9050:9050</code> if you need host access.
+    </div>
+  </div>
+
+  <!-- BROWSER -->
+  <div class="docs-content" id="doc-browser">
+    <h2 class="docs-h2">Browser Configuration</h2>
+    <p class="docs-p">Route your browser traffic through TorNet's SOCKS5 proxy.</p>
+
+    <h3 class="docs-h3">Firefox</h3>
+    <p class="docs-p">With TorNet running, configure Firefox to use it as a SOCKS5 proxy:</p>
+
+    <ol style="color:var(--text2);font-size:0.88rem;line-height:2;padding-left:1.5rem;margin-bottom:1.5rem;">
+      <li>Open <strong style="color:var(--text)">Preferences</strong> → <strong style="color:var(--text)">Network Settings</strong></li>
+      <li>Select <strong style="color:var(--text)">Manual proxy configuration</strong></li>
+      <li>Set <strong style="color:var(--text)">SOCKS Host</strong> to <code style="font-family:var(--mono);color:var(--green)">127.0.0.1</code></li>
+      <li>Set <strong style="color:var(--text)">Port</strong> to <code style="font-family:var(--mono);color:var(--green)">9050</code></li>
+      <li>Select <strong style="color:var(--text)">SOCKS v5</strong></li>
+      <li>Check <strong style="color:var(--text)">Proxy DNS when using SOCKS v5</strong></li>
+      <li>Click <strong style="color:var(--text)">OK</strong></li>
+    </ol>
+
+    <h3 class="docs-h3">Verify in browser</h3>
+    <p class="docs-p">Visit <a href="https://check.torproject.org" target="_blank" style="color:var(--green)">check.torproject.org</a> to confirm your traffic is going through Tor.</p>
+
+    <div class="alert">
+      <strong>NOTE</strong> — DNS leaks are prevented when "Proxy DNS" is enabled. Always verify with the Tor Project's checker.
+    </div>
+  </div>
+</div>
+</section>
+
+
+<!-- ═══════════════════════════════ BLOG ═══════════════════════════════ -->
+<section id="blog">
+<div style="max-width:860px;margin:0 auto;padding:6rem 2rem 4rem;">
+
+  <!-- BLOG LIST -->
+  <div id="blog-list">
+    <div class="section-label">Blog</div>
+    <h2 class="section-title">Articles & Updates</h2>
+    <p class="docs-p">Technical write-ups on Tor, OSINT automation, and TorNet development.</p>
+
+    <div class="blog-grid">
+      <div class="blog-card" onclick="showPost('post1')">
+        <div class="blog-meta">
+          <span class="blog-tag-pill">OSINT</span>
+          <span>May 2026</span>
+          <span>5 min read</span>
+        </div>
+        <h3 class="blog-title">How Tor Exit Nodes Work — and Why IP Rotation Matters</h3>
+        <p class="blog-excerpt">A technical overview of the Tor network's exit node system, how identities are cycled, and the use cases where programmatic rotation is essential.</p>
+        <div class="blog-read">Read article →</div>
+      </div>
+
+      <div class="blog-card" onclick="showPost('post2')">
+        <div class="blog-meta">
+          <span class="blog-tag-pill">Dev</span>
+          <span>March 2026</span>
+          <span>4 min read</span>
+        </div>
+        <h3 class="blog-title">Building TorNet: From Script to PyPI Package</h3>
+        <p class="blog-excerpt">The story behind TorNet — from a one-off OSINT automation script to a published open-source library with 260+ stars.</p>
+        <div class="blog-read">Read article →</div>
+      </div>
+
+      <div class="blog-card" onclick="showPost('post3')">
+        <div class="blog-meta">
+          <span class="blog-tag-pill">Security</span>
+          <span>January 2026</span>
+          <span>6 min read</span>
+        </div>
+        <h3 class="blog-title">OSINT Automation with Python and Tor</h3>
+        <p class="blog-excerpt">How to combine subfinder, Amass, and TorNet for anonymized open-source intelligence gathering — a practical workflow.</p>
+        <div class="blog-read">Read article →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOG POSTS -->
+  <div id="blog-post-area" style="display:none;">
+    <button class="blog-back" onclick="hidePosts()"><i class='bx bx-arrow-back'></i> Back to articles</button>
+
+    <div class="blog-post" id="post1">
+      <div class="post-header">
+        <div class="blog-meta" style="margin-bottom:1rem;">
+          <span class="blog-tag-pill">OSINT</span>
+          <span>May 2026</span>
+          <span>5 min read</span>
+        </div>
+        <h1 class="post-title">How Tor Exit Nodes Work — and Why IP Rotation Matters</h1>
+      </div>
+      <div class="post-body">
+        <p>When you connect to the Tor network, your traffic passes through three relays before reaching the destination: a guard node (entry), a middle relay, and an exit node. The exit node is what the destination server sees as your IP address.</p>
+        <p>Each time you request a new Tor identity — which TorNet does programmatically via the control protocol — Tor builds a new circuit with a different exit node. From the perspective of any server you're connecting to, you appear to be a different machine from a different country.</p>
+        <h3>Why this matters for OSINT</h3>
+        <p>Open-source intelligence gathering often involves repeated, automated requests to public web services. Rate limiting and IP-based blocking are the first line of defense these services deploy. By rotating through Tor exit nodes, you can sustain data collection workflows that would otherwise be throttled or banned.</p>
+        <p>TorNet automates this entirely: call <code style="font-family:var(--mono);color:var(--green)">change_ip()</code> or let <code style="font-family:var(--mono);color:var(--green)">change_ip_repeatedly()</code> handle the timing, and your scripts get a fresh identity on demand.</p>
+        <h3>Responsible use</h3>
+        <p>IP rotation through Tor is a legitimate tool for privacy, security research, and OSINT — but it carries ethical weight. Never use TorNet to bypass protections in ways that harm services or violate terms of service. The Tor network is a shared resource maintained by volunteers.</p>
+      </div>
+    </div>
+
+    <div class="blog-post" id="post2">
+      <div class="post-header">
+        <div class="blog-meta" style="margin-bottom:1rem;">
+          <span class="blog-tag-pill">Dev</span>
+          <span>March 2026</span>
+          <span>4 min read</span>
+        </div>
+        <h1 class="post-title">Building TorNet: From Script to PyPI Package</h1>
+      </div>
+      <div class="post-body">
+        <p>TorNet started as a small utility script — a few lines of Python that called Tor's control port to request a new circuit. No CLI, no packaging, just something that worked in a terminal session.</p>
+        <p>The turning point was realizing that the pattern was repeatable. Every time I needed to automate requests against a public API, I copied the same block of code. That repetition is the clearest signal that something should become a library.</p>
+        <h3>The packaging decision</h3>
+        <p>Getting a package onto PyPI is straightforward, but the naming matters. <code style="font-family:var(--mono);color:var(--green)">python-tornet</code> was chosen to be unambiguous in a <code style="font-family:var(--mono);color:var(--green)">pip install</code> context, while the import name stays clean at <code style="font-family:var(--mono);color:var(--green)">from tornet import ...</code>.</p>
+        <p>The AUR package came later, after Arch users started filing issues about installation paths. Maintaining a PKGBUILD turned out to be less work than answering the same setup question repeatedly.</p>
+        <h3>What 260 stars taught me</h3>
+        <p>Most of the GitHub traffic came from two places: people searching for "Tor IP rotation Python" and mentions in OSINT resource lists. Neither was planned. The lesson: solve a specific problem well, name it clearly, and put it where people search.</p>
+      </div>
+    </div>
+
+    <div class="blog-post" id="post3">
+      <div class="post-header">
+        <div class="blog-meta" style="margin-bottom:1rem;">
+          <span class="blog-tag-pill">Security</span>
+          <span>January 2026</span>
+          <span>6 min read</span>
+        </div>
+        <h1 class="post-title">OSINT Automation with Python and Tor</h1>
+      </div>
+      <div class="post-body">
+        <p>A practical OSINT workflow combines passive reconnaissance tools with anonymized request infrastructure. TorNet fits into this stack as the transport layer — handling IP rotation so your tools can focus on what they're good at.</p>
+        <h3>The basic stack</h3>
+        <p>Three tools cover most passive recon needs: <code style="font-family:var(--mono);color:var(--green)">subfinder</code> for subdomain enumeration, <code style="font-family:var(--mono);color:var(--green)">Amass</code> for deeper DNS graph mapping, and <code style="font-family:var(--mono);color:var(--green)">WhatWeb</code> for technology fingerprinting. All three can be scripted in Python and wrapped with TorNet rotation.</p>
+        <h3>Wiring it together</h3>
+        <p>The pattern is simple: initialize TorNet, run a batch of requests, rotate identity, repeat. For active probing (HTTP requests, API calls), route everything through the SOCKS5 proxy at <code style="font-family:var(--mono);color:var(--green)">127.0.0.1:9050</code> using the <code style="font-family:var(--mono);color:var(--green)">requests</code> library's proxies parameter.</p>
+        <div class="code-block" style="margin:1.5rem 0;">
+          <div class="code-block-header"><span class="code-lang">python</span></div>
+<pre><span class="kw">import</span> requests
+<span class="kw">from</span> tornet <span class="kw">import</span> initialize_environment, change_ip
+
+initialize_environment()
+
+proxies = {<span class="str">'http'</span>: <span class="str">'socks5h://127.0.0.1:9050'</span>, <span class="str">'https'</span>: <span class="str">'socks5h://127.0.0.1:9050'</span>}
+
+<span class="kw">for</span> target <span class="kw">in</span> targets:
+    r = requests.get(target, proxies=proxies)
+    <span class="cm"># process r.text ...</span>
+    change_ip()  <span class="cm"># fresh identity per target</span></pre>
+        </div>
+        <h3>Staying ethical</h3>
+        <p>OSINT is legal when limited to publicly available information and used for legitimate purposes — security research, threat intelligence, bug bounty reconnaissance within defined scope. Always verify you have authorization before active probing, and respect robots.txt.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<script>
+  function showSection(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-links a:not(.nav-cta)').forEach(a => a.classList.remove('active'));
+    if (id === 'home') {
+      document.getElementById('home').classList.add('active');
+      document.getElementById('nav-home').classList.add('active');
+    } else if (id === 'docs') {
+      document.getElementById('docs').classList.add('active');
+      document.getElementById('nav-docs').classList.add('active');
+      window.scrollTo(0, 0);
+    } else if (id === 'blog') {
+      document.getElementById('blog').classList.add('active');
+      document.getElementById('nav-blog').classList.add('active');
+      window.scrollTo(0, 0);
+    }
+    return false;
+  }
+
+  function switchDoc(id, btn) {
+    document.querySelectorAll('.docs-content').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.docs-nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('doc-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showPost(id) {
+    document.getElementById('blog-list').style.display = 'none';
+    document.getElementById('blog-post-area').style.display = 'block';
+    document.querySelectorAll('.blog-post').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function hidePosts() {
+    document.getElementById('blog-list').style.display = 'block';
+    document.getElementById('blog-post-area').style.display = 'none';
+  }
+
+  function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = "<i class='bx bx-check'></i>";
+      btn.style.color = '#00ff88';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 1500);
+    });
+  }
+</script>
+</body>
+</html>
