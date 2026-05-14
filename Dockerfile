@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.14.5-slim
 
 # Set Docker environment variable
 ENV DOCKER_ENV=true
